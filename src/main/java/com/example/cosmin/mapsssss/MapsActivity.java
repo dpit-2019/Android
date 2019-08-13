@@ -54,10 +54,8 @@ public class MapsActivity extends FragmentActivity implements   GoogleMap.OnMark
         googleMap.setOnMarkerClickListener(this);
         googleMap.setOnCameraMoveListener(this);
         // Add a marker in Sydney and move the camera
-        LatLng sydney = new LatLng(-34, 151);
-        LatLng po = new LatLng(46.771286, 23.596441);
-        mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(po));
+        LatLng center = new LatLng(46.768869, 23.588409);
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(center, 13));
         googleMap.setOnCameraIdleListener(this);
 
     }
@@ -80,7 +78,7 @@ public class MapsActivity extends FragmentActivity implements   GoogleMap.OnMark
             resp = client.newCall(request).execute();
             ////JSONObject priza = new JSONObject(resp.body().string());
             JSONArray jsonArr = new JSONArray(resp.body().string());
-            for (int i = 1; i < jsonArr.length(); i++) {
+            for (int i = 0; i < jsonArr.length(); i++) {
 
                 LatLng point = new LatLng(jsonArr.getJSONObject(i).getDouble("lat"), jsonArr.getJSONObject(i).getDouble("lng"));
                 mMap.addMarker(new MarkerOptions().position(point).title("" + jsonArr.getJSONObject(i).getInt("id")));
