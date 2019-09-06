@@ -1,21 +1,30 @@
 package com.example.cosmin.mapsssss;
 
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.FragmentActivity;
 
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.StrictMode;
 import android.widget.Toast;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
 import com.squareup.okhttp.Response;
@@ -35,17 +44,39 @@ public class MapsActivity extends FragmentActivity implements   GoogleMap.OnMark
                                                                 GoogleMap.OnCameraMoveListener{
     public static final String EXTRA_MESSAGE = "com.example.cosmin.mapsssss.MESSAGE";
     private GoogleMap mMap;
+    private Location currentLocation;
+    private FusedLocationProviderClient fusedLocationProviderClient;
+    private static final int LOCATION_REQUEST_CODE =101;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
-        mapFragment.getMapAsync(this);
-        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
-        StrictMode.setThreadPolicy(policy);
+
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+
+        fetchLastLocation();
+    }
+    private void fetchLastLocation() {
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[] {
+                    android.Manifest.permission.ACCESS_FINE_LOCATION
+            }, LOCATION_REQUEST_CODE);
+            return;
+        }
+        Task<Location> task = fusedLocationProviderClient.getLastLocation();
+        task.addOnSuccessListener(new OnSuccessListener<Location>() {
+            @Override
+            public void onSuccess(Location location) {
+                if(location != null){
+                    currentLocation = location;
+                    Toast.makeText(getApplicationContext(), currentLocation.getLatitude()+""+currentLocation.getLongitude(),Toast.LENGTH_SHORT).show();
+                    SupportMapFragment supportMapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
+                    supportMapFragment.getMapAsync(MapsActivity.this);
+                }
+            }
+        });
     }
 
     @Override
@@ -53,11 +84,24 @@ public class MapsActivity extends FragmentActivity implements   GoogleMap.OnMark
         mMap = googleMap;
         googleMap.setOnMarkerClickListener(this);
         googleMap.setOnCameraMoveListener(this);
-        // Add a marker in Sydney and move the camera
-        LatLng center = new LatLng(46.768869, 23.588409);
-        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(center, 13));
         googleMap.setOnCameraIdleListener(this);
+        LatLng current = new LatLng(currentLocation.getLatitude(),currentLocation.getLongitude());
+        MarkerOptions markerOptions = new MarkerOptions().position(current).title("HERE");
+        googleMap.animateCamera(CameraUpdateFactory.newLatLng(current));
+        googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(current,5));
+        googleMap.addMarker(markerOptions);
 
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        switch (requestCode){
+            case LOCATION_REQUEST_CODE:
+                if(grantResults.length>0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
+                    fetchLastLocation();
+                }
+                break;
+        }
     }
 
     @Override
